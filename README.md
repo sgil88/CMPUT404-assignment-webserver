@@ -7,6 +7,15 @@ See requirements.org (plain-text) for a description of the project.
 
 Make a simple webserver.
 
+
+Collaboration
+=============
+
+Pair Programmed
+Bronte Lee: bronte
+Stephanie Gil: sgil
+
+
 Contributors / Licensing
 ========================
 
