@@ -32,15 +32,18 @@ class MyWebServer(SocketServer.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall("OK")
+        
         rel_path = self.get_root()
-        self.get_indexhtml(rel_path)
+        index = self.get_indexhtml(rel_path)
+        for line in index:
+            self.request.sendall(line)
+        
 
     def get_root(self):
         """
         Assuming there is always atleast one / after GET in the request string
         """
-        rel_path = "./www/"
+        rel_path = "www/"
 
         lines = self.data.split("\n")
         first_line = lines[0]
@@ -65,10 +68,11 @@ class MyWebServer(SocketServer.BaseRequestHandler):
        
         try:
             rel_path += "index.html" 
-            print (" relative path is:" + rel_path)
             index = open(rel_path)
+            return index
         except:
             print ("404 error")
+            return "404"
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
