@@ -34,9 +34,14 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         print ("Got a request of: %s\n" % self.data)
         
         rel_path = self.get_root()
-        index = self.get_indexhtml(rel_path)
-        for line in index:
+        html_content = self.get_indexhtml(rel_path)
+        for line in html_content:
             self.request.sendall(line)
+
+        css_content = self.get_css(html_content, rel_path)
+#        print (css_content)
+#        for line in css_content:
+#            self.request.sendall(line)
         
 
     def get_root(self):
@@ -65,14 +70,42 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         return rel_path
 
     def get_indexhtml(self, rel_path):
-       
         try:
-            rel_path += "index.html" 
-            index = open(rel_path)
-            return index
+            index = open(rel_path+"index.html")
+            html_content = []
+            for line in index:
+                html_content.append(line)
+            index.close()
+            return html_content
         except:
             print ("404 error")
             return "404"
+
+    def get_css(self, html_content, rel_path):
+        try:
+            for line in html_content:
+                if ("text/css" in line):
+                    line = line.strip()
+                    line = line.replace('<', '')
+                    line = line.replace('>','')
+                    line = line.replace('"', '')
+                    elements = line.split()[1:]
+                    
+                    tags = {}
+                    for e in elements:
+                        values = e.split("=")
+                        tags[values[0]] = values[1]
+
+                    for tag, value in tags.iteritems():
+                        if tag == "href":
+                            file = open(rel_path+value)
+                            css_content = []
+                            for css_line in file:
+                                css_content.append(css_line)
+                            file.close()
+                            return css_content
+        except:
+            return "404-css" 
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
