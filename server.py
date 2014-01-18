@@ -38,7 +38,7 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         # getting dir path and html file name from request
         rel_path, file_name = self.get_root()
         if rel_path == None:
-            display_404()
+            self.display_404()
             return
 
         # getting html content either from html page user requested,
@@ -50,21 +50,18 @@ class MyWebServer(SocketServer.BaseRequestHandler):
             file_name = "index.html"
             file_content = self.get_page_content(rel_path, file_name)
         if file_content == None:
-            display_404()
+            self.display_404()
             return
-
+       
         # sending html content to client
-        response = "HTTP/1.1\r\n" \
-            + "Content-Type:text/html\r\n\r\n" \
-            + file_content
+        response = "HTTP/1.1 200 OK\r\nContent-Type:text/html\r\n\r\n"+file_content
         self.request.sendall(response)
         
+        # add css style to html page
         if ".html" in file_name:
             # sending css content to client
             css_content = self.get_css(file_content, rel_path)
-            response = "HTTP/1.1\r\n" \
-                + "Content-Type:text/css\r\n\r\n" \
-                + css_content
+            response = "HTTP/1.1 200 OK\r\nContent-Type:text/css\r\n\r\n"+css_content
             self.request.sendall(response)
  
     def get_root(self):
@@ -132,6 +129,8 @@ class MyWebServer(SocketServer.BaseRequestHandler):
 
                     for tag, value in tags.iteritems():
                         if tag == "href":
+
+                            # Open the css file and get the content
                             file = open(rel_path+value)
                             css_content = ""
                             for css_line in file:
@@ -141,12 +140,13 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         except:
             return None
 
-    def display_404():
+    def display_404(self):
         """
         Sends an HTTP 404 error for the web browser to display
         """
-        self.request.sendall("HTTP/1.1 404\r\n\r\nThe file you" \
-                                 + " requested was not found :)")
+        self.request.sendall("HTTP/1.1 404\r\n\r\n"+
+                             "<p style='text-align:center'>The page you"+
+                             " requested was not found :)</p>")
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
