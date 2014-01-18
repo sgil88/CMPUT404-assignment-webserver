@@ -26,24 +26,47 @@ import SocketServer
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-
+import os
 class MyWebServer(SocketServer.BaseRequestHandler):
 
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
+        if "favicon" in self.data:
+            return
         
-        rel_path = self.get_root()
-        html_content = self.get_indexhtml(rel_path)
-        for line in html_content:
-            self.request.sendall(line)
+        # getting dir path and html file name from request
+        rel_path, file_name = self.get_root()
+        if rel_path == None:
+            display_404()
+            return
 
-        css_content = self.get_css(html_content, rel_path)
-#        print (css_content)
-#        for line in css_content:
-#            self.request.sendall(line)
+        # getting html content either from html page user requested,
+        # or if none was specified, gets index.html
+        file_content = ""
+        if file_name != None:
+            file_content = self.get_page_content(rel_path, file_name)
+        else:
+            file_name = "index.html"
+            file_content = self.get_page_content(rel_path, file_name)
+        if file_content == None:
+            display_404()
+            return
+
+        # sending html content to client
+        response = "HTTP/1.1\r\n" \
+            + "Content-Type:text/html\r\n\r\n" \
+            + file_content
+        self.request.sendall(response)
         
-
+        if ".html" in file_name:
+            # sending css content to client
+            css_content = self.get_css(file_content, rel_path)
+            response = "HTTP/1.1\r\n" \
+                + "Content-Type:text/css\r\n\r\n" \
+                + css_content
+            self.request.sendall(response)
+ 
     def get_root(self):
         """
         Assuming there is always atleast one / after GET in the request string
@@ -61,29 +84,40 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         for part in path_parts:
             if part == "":
                 pass
+            elif ".html" in part or ".css" in part:
+                rel_path += "/"
+                return rel_path, part
             else:
-                if (".css" in part) or (".html" in part):
-                    pass
-                else:
-                    rel_path += part + "/"
-        
-        return rel_path
+                rel_path += part + "/"
+        if os.path.exists(rel_path):
+            return rel_path, None
+        else:
+            return None, None
 
-    def get_indexhtml(self, rel_path):
+    def get_page_content(self, rel_path, name):
+        """
+        Retrieves the content of an html page or a css page and returns it as
+        a string, or, if there was an error, returns None.
+        """
         try:
-            index = open(rel_path+"index.html")
-            html_content = []
-            for line in index:
-                html_content.append(line)
-            index.close()
-            return html_content
+            page = open(rel_path+name)
+            file_content = ""
+            for line in page:
+                file_content += line
+            page.close()
+            return file_content
         except:
-            print ("404 error")
-            return "404"
+            return None
 
-    def get_css(self, html_content, rel_path):
+    def get_css(self, html_string, rel_path):
+        """
+        Returns the css content to style the html page that the client wants to
+        view. If there is no css file, or if there was an error, then None is 
+        returned.
+        """
+        file_content = html_string.split('\n')
         try:
-            for line in html_content:
+            for line in file_content:
                 if ("text/css" in line):
                     line = line.strip()
                     line = line.replace('<', '')
@@ -99,13 +133,20 @@ class MyWebServer(SocketServer.BaseRequestHandler):
                     for tag, value in tags.iteritems():
                         if tag == "href":
                             file = open(rel_path+value)
-                            css_content = []
+                            css_content = ""
                             for css_line in file:
-                                css_content.append(css_line)
+                                css_content += css_line
                             file.close()
                             return css_content
         except:
-            return "404-css" 
+            return None
+
+    def display_404():
+        """
+        Sends an HTTP 404 error for the web browser to display
+        """
+        self.request.sendall("HTTP/1.1 404\r\n\r\nThe file you" \
+                                 + " requested was not found :)")
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
