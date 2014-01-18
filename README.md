@@ -11,9 +11,9 @@ Make a simple webserver.
 Collaboration
 =============
 
-Pair Programmed
-Bronte Lee: bronte
-Stephanie Gil: sgil
+Pair Programmed:  
+Bronte Lee  
+Stephanie Gil
 
 
 Contributors / Licensing
@@ -24,7 +24,9 @@ Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle.
 server.py contains contributions from:
 
 * Abram Hindle
-* Eddie Antonio Santos
+* Eddie Antonio Santos  
+* Bronte Lee  
+* Stephanie Gil  
 
 But the server.py example is derived from the python documentation
 examples thus some of the code is Copyright © 2001-2013 Python

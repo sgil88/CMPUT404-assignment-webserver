@@ -1,7 +1,7 @@
 import SocketServer
 # coding: utf-8
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Bronte Lee, Stephanie Gil
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,67 +25,81 @@ import SocketServer
 # run: python freetests.py
 
 # try: curl -v -X GET http://127.0.0.1:8080/
+#
+# 
 
 import os
 class MyWebServer(SocketServer.BaseRequestHandler):
 
     def handle(self):
+        """
+        Handles the GET request from the client. If there are any errors,
+        just sends 404 error.
+        """
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        if "favicon" in self.data:
-            return
         
-        # getting dir path and html file name from request
+        # Getting directory path and file name from request
         rel_path, file_name = self.get_root()
+
+        # If the directory path does not exist, display 404
         if rel_path == None:
             self.display_404()
             return
 
-        # getting html content either from html page user requested,
-        # or if none was specified, gets index.html
+        # Getting html content either from html page user requested,
+        # If no file in the directory was specified, from the GET 
+        # request, gets index.html
         file_content = ""
-        if file_name != None:
-            file_content = self.get_page_content(rel_path, file_name)
-        else:
+        if file_name == None:
             file_name = "index.html"
-            file_content = self.get_page_content(rel_path, file_name)
+
+        # Get the file content. If it doesn't exist, display 404
+        file_content = self.get_page_content(rel_path, file_name)
+
         if file_content == None:
             self.display_404()
             return
        
-        # sending html content to client
-        response = "HTTP/1.1 200 OK\r\nContent-Type:text/html\r\n\r\n"+file_content
-        self.request.sendall(response)
-        
-        # add css style to html page
+        # Sending file content to client depending on whether it's .html or .css
         if ".html" in file_name:
-            # sending css content to client
-            css_content = self.get_css(file_content, rel_path)
-            response = "HTTP/1.1 200 OK\r\nContent-Type:text/css\r\n\r\n"+css_content
+            response = "HTTP/1.1 200 OK\r\nContent-Type:text/html\r\n\r\n"+ \
+                file_content
             self.request.sendall(response)
+        elif ".css" in file_name:
+            response = "HTTP/1.1 200 OK\r\nContent-Type:text/css\r\n\r\n"+ \
+                file_content
+            self.request.sendall(response)
+        else:
+            self.display_404()
  
     def get_root(self):
         """
-        Assuming there is always atleast one / after GET in the request string
+        Assuming there is always atleast one / after GET in the request string.
+        Will return the directory path and the filename from the GET reqtuest.
+        If the directory path doesn't exists, returns None. If the file name 
+        was not given, returns None.
         """
         rel_path = "www/"
 
         lines = self.data.split("\n")
         first_line = lines[0]
         words = first_line.split(" ")
-        url_string = words[1]
+        directory_string = words[1]
 
-        # ignoring first element (empty space)
-        path_parts = url_string.split("/")[1:] 
+        # Ignoring first element (empty space)
+        path_parts = directory_string.split("/")[1:] 
         
+        # Construct the path to the directory. If the file name was also given
+        # in the GET request, return those from the function 
         for part in path_parts:
-            if part == "":
-                pass
-            elif ".html" in part or ".css" in part:
+            if ".html" in part or ".css" in part:
                 rel_path += "/"
                 return rel_path, part
             else:
                 rel_path += part + "/"
+
+        # We just have a directory path, so check to see if the directory exists
         if os.path.exists(rel_path):
             return rel_path, None
         else:
@@ -106,46 +120,13 @@ class MyWebServer(SocketServer.BaseRequestHandler):
         except:
             return None
 
-    def get_css(self, html_string, rel_path):
-        """
-        Returns the css content to style the html page that the client wants to
-        view. If there is no css file, or if there was an error, then None is 
-        returned.
-        """
-        file_content = html_string.split('\n')
-        try:
-            for line in file_content:
-                if ("text/css" in line):
-                    line = line.strip()
-                    line = line.replace('<', '')
-                    line = line.replace('>','')
-                    line = line.replace('"', '')
-                    elements = line.split()[1:]
-                    
-                    tags = {}
-                    for e in elements:
-                        values = e.split("=")
-                        tags[values[0]] = values[1]
-
-                    for tag, value in tags.iteritems():
-                        if tag == "href":
-
-                            # Open the css file and get the content
-                            file = open(rel_path+value)
-                            css_content = ""
-                            for css_line in file:
-                                css_content += css_line
-                            file.close()
-                            return css_content
-        except:
-            return None
-
     def display_404(self):
         """
         Sends an HTTP 404 error for the web browser to display
         """
-        self.request.sendall("HTTP/1.1 404\r\n\r\n"+
-                             "<p style='text-align:center'>The page you"+
+        self.request.sendall("HTTP/1.1 404\r\n\r\n" + \
+                             "<h1 style='text-align:center'>404 NOT FOUND </h1> " + \
+                             "<p style='text-align:center'>The page you" + \
                              " requested was not found :)</p>")
 
 if __name__ == "__main__":
